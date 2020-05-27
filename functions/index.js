@@ -17,10 +17,10 @@ const firebaseConfig = {
 const firebase = require("firebase");
 firebase.initializeApp(firebaseConfig);
 
+const db = firebase.firestore();
+
 app.get("/screams", (req, res) => {
-  admin
-    .firestore()
-    .collection("screams")
+  db.collection("screams")
     .orderBy("createdAt", "desc")
     .get()
     .then((data) => {
@@ -44,9 +44,7 @@ app.post("/scream", (req, res) => {
     userHandle: req.body.userHandle,
     createdAt: new Date().toISOString(),
   };
-  admin
-    .firestore()
-    .collection("screams")
+  db.collection("screams")
     .add(newScream)
     .then((doc) => {
       res.json({ message: `document ${doc.id} has been created successfully` });
@@ -67,16 +65,44 @@ app.post("/signup", (req, res) => {
     handle: req.body.handle,
   };
   // validate data
-  firebase
-    .auth()
-    .createUserWithEmailAndPassword(newUser.email, newUser.password)
+  let token, userId;
+  db.doc(`/users/${newUser.handle}`)
+    .get()
+    .then((doc) => {
+      if (doc.exists) {
+        return res
+          .status(400)
+          .json({ handle: "this handle is already taken " });
+      } else {
+        return firebase
+          .auth()
+          .createUserWithEmailAndPassword(newUser.email, newUser.password);
+      }
+    })
     .then((data) => {
-      return res
-        .status(201)
-        .json({ message: `user ${data.user.uid} signed up successfuly` });
+      userId = data.user.uid;
+      return data.user.getIdToken();
+    })
+    .then((idToken) => {
+      token = idToken;
+      const userCredentials = {
+        handle: newUser.handle,
+        email: newUser.email,
+        createdAt: new Date().toISOString(),
+        userId: userId,
+      };
+      return db.doc(`/users/${newUser.handle}`).set(userCredentials);
+    })
+    .then(() => {
+      return res.status(201).json({ token });
     })
     .catch((err) => {
-      return res.status(500).json({ error: err.code });
+      console.log(err);
+      if (err.code === "auth/email-already-in-use") {
+        return res.status(400).json({ email: "Email is already taken" });
+      } else {
+        return res.status(500).json({ error: err.code });
+      }
     });
 });
 

@@ -4,6 +4,9 @@ const firebase = require("firebase");
 const firebaseConfig = require("./util/config");
 firebase.initializeApp(firebaseConfig);
 
+const admin = require("firebase-admin");
+const db = firebase.firestore();
+
 const app = require("express")();
 
 const FBAuth = require("./util/fbAuth");

@@ -26,7 +26,7 @@ exports.postOneScream = (req, res) => {
     userImage: req.user.imageUrl,
     createdAt: new Date().toISOString(),
     likeCount: 0,
-    commentCount,
+    commentCount: 0,
   };
   db.collection("screams")
     .add(newScream)
@@ -91,6 +91,9 @@ exports.commentOnScream = (req, res) => {
       if (!doc.exists) {
         return res.status(404).json({ error: "Scream not found" });
       }
+      return doc.ref.update({ commentCount: doc.data().commentCount + 1 });
+    })
+    .then(() => {
       return db.collection("comments").add(newComment);
     })
     .then(() => {

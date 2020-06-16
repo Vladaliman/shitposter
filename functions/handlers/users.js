@@ -124,6 +124,8 @@ exports.getUserDetails = (req, res) => {
           .where("userHandle", "==", req.params.handle)
           .orderBy("createdAt", "desc")
           .get();
+      } else {
+        return res.status(404).json({ error: "User not found" });
       }
     })
     .then((data) => {
@@ -247,4 +249,22 @@ exports.uploadImage = (req, res) => {
       });
   });
   busboy.end(req.rawBody);
+};
+
+//Mark notifications read
+exports.markNotificationsRead = (req, res) => {
+  let batch = db.batch();
+  req.body.forEach((notificationId) => {
+    const notification = db.doc(`/notifications/${notificationId}`);
+    batch.update(notification, { read: true });
+  });
+  batch
+    .commit()
+    .then(() => {
+      return res.json({ message: "Notifications marked read" });
+    })
+    .catch((err) => {
+      console.error(err);
+      return res.status(500).json({ error: err.code });
+    });
 };

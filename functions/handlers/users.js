@@ -124,7 +124,7 @@ exports.getUserDetails = (req, res) => {
           .orderBy("createdAt", "desc")
           .get();
       } else {
-        return res.status(404).json({ error: "User not found" });
+        return res.status(404).json({ errror: "User not found" });
       }
     })
     .then((data) => {
@@ -140,6 +140,7 @@ exports.getUserDetails = (req, res) => {
           screamId: doc.id,
         });
       });
+      return res.json(userData);
     })
     .catch((err) => {
       console.error(err);

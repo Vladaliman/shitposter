@@ -1,6 +1,7 @@
 const { admin, db } = require("../util/admin");
 const firebase = require("firebase");
 const { firebaseConfig } = require("../util/config");
+const { v4: uuidv4 } = require("uuid");
 
 const {
   validateSignupData,
@@ -208,18 +209,22 @@ exports.uploadImage = (req, res) => {
   let imageFileName;
   let imageToBeUploaded = {};
 
-  busboy.on("file", (fieldname, file, fileName, encoding, mimetype) => {
+  // String for image token
+  let generatedToken = uuidv4();
+
+  busboy.on("file", (fieldname, file, filename, encoding, mimetype) => {
     if (mimetype !== "image/jpeg" && mimetype !== "image/png") {
       return res.status(400).json({ error: "Wrong File type submitted" });
     }
     console.log(fieldname);
-    console.log(fileName);
+    console.log(filename);
     console.log(mimetype);
 
-    const imgageExtension = fileName.split(".")[fileName.split(".").length - 1];
+    const imageExtension = filename.split(".")[filename.split(".").length - 1];
+    // 32756238461724837.png
     imageFileName = `${Math.round(
-      Math.random * 100000000000
-    )}.${imgageExtension}`;
+      Math.random() * 1000000000000
+    ).toString()}.${imageExtension}`;
     const filepath = path.join(os.tmpdir(), imageFileName);
     imageToBeUploaded = { filepath, mimetype };
     file.pipe(fs.createWriteStream(filepath));
@@ -233,11 +238,13 @@ exports.uploadImage = (req, res) => {
         metadata: {
           metadata: {
             contentType: imageToBeUploaded.mimetype,
+            //Generate token to be appended to imageUrl
+            firebaseStorageDownloadTokens: generatedToken,
           },
         },
       })
       .then(() => {
-        const imageUrl = `https://firebasestorage.googleapis.com/v0/b/${firebaseConfig.storageBucket}/o/${imageFileName}?alt=media`;
+        const imageUrl = `https://firebasestorage.googleapis.com/v0/b/${firebaseConfig.storageBucket}/o/${imageFileName}?alt=media&token=${generatedToken}`;
         return db.doc(`/users/${req.user.handle}`).update({ imageUrl });
       })
       .then(() => {
